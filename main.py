@@ -14,7 +14,9 @@ MQTT_BROKER = config['mqtt']['server']
 MQTT_PORT = config['mqtt']['port']
 MQTT_USERNAME = config['mqtt']['username']
 MQTT_PASSWORD = config['mqtt']['password']
-BASE_TOPIC = config['mqtt']['base_topic']
+MQTT_BASE_TOPIC = config['mqtt']['base_topic']
+MQTT_TOPIC_STATUS_REQUEST = f"{MQTT_BASE_TOPIC}/status/request"
+MQTT_TOPIC_STATUS_RESPONSE = f"{MQTT_BASE_TOPIC}/status/response"
 
 # Set up MQTT client
 client = mqtt.Client()
@@ -35,9 +37,11 @@ stable_states = {pin: None for pin in pins_to_monitor}
 
 def on_connect(client, userdata, flags, rc):
     print(f"Connected with result code {rc}")
+    send_all_statuses()
     # Subscribing to the control topic for each GPIO pin
+    client.subscribe(MQTT_TOPIC_STATUS_REQUEST)
     for pin in pins_to_control:
-        client.subscribe(f"{BASE_TOPIC}/{pin}/set")
+        client.subscribe(f"{MQTT_BASE_TOPIC}/{pin}/set")
 
 # Function to control relay based on GPIO pin
 gpio_outputs = {}
@@ -75,7 +79,7 @@ def control_relay(pin, mode, duration):
         t.start()
 
 def publish_state(gpio_pin, data):
-    topic = f"{BASE_TOPIC}/{gpio_pin}"
+    topic = f"{MQTT_BASE_TOPIC}/{gpio_pin}"
     client.publish(topic, json.dumps(data))
 
 # Callback function to run when a pin state changes
@@ -92,6 +96,22 @@ def pin_changed(pin):
     timers[pin.pin.number] = Timer(debounce_time, send_status, [pin.pin.number])
     timers[pin.pin.number].start()
 
+def send_all_statuses():
+    global stable_states, gpio_outputs
+    
+    # Prepare the status of GPIO inputs
+    input_statuses = {pin: state for pin, state in stable_states.items()}
+    
+    # Prepare the status of GPIO outputs
+    output_statuses = {pin: (True if pin in gpio_outputs and gpio_outputs[pin].value else False) for pin in pins_to_control}
+
+    status_message = {
+        "connected": input_statuses,
+        "outputs": output_statuses
+    }
+    print(f"Sending all statuses: {status_message}")
+    client.publish(MQTT_TOPIC_STATUS_RESPONSE, json.dumps(status_message))
+
 # Function to send status to MQTT and print to console
 def send_status(pin_number):
     global stable_states
@@ -104,15 +124,19 @@ def send_status(pin_number):
 def on_message(client, userdata, message):
     print(f"Received MQTT message on topic {message.topic}: {message.payload.decode()}")
     try:
-        data = json.loads(message.payload.decode())
-        gpio_pin = int(message.topic.split('/')[-2])
-        mode = data.get('mode', 'toggle')
-        duration = data.get('duration', 0)
-        
-        if gpio_pin in pins_to_control:
-            control_relay(gpio_pin, mode, duration)
+        if message.topic == MQTT_TOPIC_STATUS_REQUEST:
+            send_all_statuses()
+        elif message.topic.startswith(MQTT_BASE_TOPIC) and message.topic.endswith('/set'):
+            gpio_pin = int(message.topic.split('/')[-2])
+            if gpio_pin in pins_to_control:
+                data = json.loads(message.payload.decode())
+                mode = data.get('mode', 'toggle')
+                duration = data.get('duration', 0)
+                control_relay(gpio_pin, mode, duration)
+            else:
+                print(f"GPIO pin {gpio_pin} is not configured for control")
         else:
-            print(f"GPIO pin {gpio_pin} is not configured for control")
+            print(f"Ignoring MQTT message on unexpected topic: {message.topic}")
     except Exception as e:
         print(f"Error processing MQTT message: {e}")
 
@@ -142,15 +166,6 @@ for button in buttons:
 # Connect to MQTT broker
 client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
 client.connect(MQTT_BROKER, MQTT_PORT, 60)
-
-# Send initial pin statuses to MQTT and print to console
-for pin, state in stable_states.items():
-    message = f"Initial state: Pin {pin} is {state} to GND"
-    print(message)
-    publish_state(pin, {
-        "initial": True,
-        "connected": state
-    })
 
 # Loop to maintain network traffic flow with the broker
 client.loop_forever()

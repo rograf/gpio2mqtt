@@ -1,14 +1,14 @@
 mqtt:
   server: "test.mosquitto.org"
   port: 1883
-  user: ""
+  username: ""
   password: ""
   base_topic: "gpio2mqtt"
 
-pins_to_monitor:
+gpio_to_monitor:
   - 17
   - 22
 
-pins_to_control:
+gpio_to_control:
   - 15
   - 18

@@ -46,36 +46,38 @@ def on_connect(client, userdata, flags, rc):
 # Function to control relay based on GPIO pin
 gpio_outputs = {}
 
-def control_relay(pin, mode, duration):
+def control_relay(pin, power, duration):
     global gpio_outputs
 
-    oposite_mode = 'off' if mode == 'on' else 'on'
- 
-    if mode == 'on':
+    oposite_power = not power
+
+    if power is True:
         if pin not in gpio_outputs:
             gpio_outputs[pin] = OutputDevice(pin)
-            gpio_outputs[pin].on()
-            publish_state(pin, {
-                "power": True,
-            })
-    elif mode == 'off':
+        gpio_outputs[pin].on()
+        publish_state(pin, {
+            "power": True,
+        })
+    elif power is False:
         if pin in gpio_outputs:
+            gpio_outputs[pin].off()  # Ensure to turn off before deleting
             del gpio_outputs[pin]
-            publish_state(pin, {
-                "power": False,
-            })
-    elif mode == 'toggle':
+        publish_state(pin, {
+            "power": False,
+        })
+    elif power is None:
         if pin in gpio_outputs:
-            control_relay(pin, 'off', 0)
+            control_relay(pin, False, 0)
+            oposite_power = True
         else:
-            control_relay(pin, 'on', 0)
+            control_relay(pin, True, 0)
+            oposite_power = False
     else:
-        print(f"Unknown mode: {mode}")
-
+        print(f"Unknown power state: {power}")
 
     if duration and duration != 0:
         # Toggle the relay after the duration
-        t = Timer(duration / 1000.0, lambda: control_relay(pin, oposite_mode, 0))
+        t = Timer(duration / 1000.0, lambda: control_relay(pin, oposite_power, 0))
         t.start()
 
 def publish_state(gpio_pin, data):
@@ -130,9 +132,9 @@ def on_message(client, userdata, message):
             gpio_pin = int(message.topic.split('/')[-2])
             if gpio_pin in pins_to_control:
                 data = json.loads(message.payload.decode())
-                mode = data.get('mode', 'toggle')
+                power = data.get('power')
                 duration = data.get('duration', 0)
-                control_relay(gpio_pin, mode, duration)
+                control_relay(gpio_pin, power, duration)
             else:
                 print(f"GPIO pin {gpio_pin} is not configured for control")
         else:

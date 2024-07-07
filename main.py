@@ -10,8 +10,9 @@ with open('config.yaml', 'r') as yamlfile:
     config = yaml.safe_load(yamlfile)
 
 # MQTT settings
-MQTT_BROKER = config['mqtt']['server']
+MQTT_SERVER = config['mqtt']['server']
 MQTT_PORT = config['mqtt']['port']
+MQTT_SECURE = config['mqtt']['secure']
 MQTT_USERNAME = config['mqtt']['username']
 MQTT_PASSWORD = config['mqtt']['password']
 MQTT_BASE_TOPIC = config['mqtt']['base_topic']
@@ -167,7 +168,11 @@ for button in buttons:
 
 # Connect to MQTT broker
 client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
-client.connect(MQTT_BROKER, MQTT_PORT, 60)
+
+if MQTT_SECURE:
+    client.tls_set()
+
+client.connect(MQTT_SERVER, MQTT_PORT, 60)
 
 # Loop to maintain network traffic flow with the broker
 client.loop_forever()

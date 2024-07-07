@@ -1,7 +1,7 @@
 mqtt:
   server: "test.mosquitto.org"
   port: 1883
-  secure: true
+  secure: false
   username: ""
   password: ""
   base_topic: "gpio2mqtt"

@@ -42,7 +42,7 @@ def on_connect(client, userdata, flags, rc):
     # Subscribing to the control topic for each GPIO outputs
     client.subscribe(MQTT_TOPIC_STATUS_REQUEST)
     for gpio in gpio_outputs:
-        client.subscribe(f"{MQTT_BASE_TOPIC}/{gpio}/set")
+        client.subscribe(f"{MQTT_BASE_TOPIC}/GPIO_{gpio}/set")
 
 # Function to control relay based on GPIO
 outputs_states = {}
@@ -82,7 +82,7 @@ def control_relay(gpio, power, duration):
         t.start()
 
 def publish_state(gpio, data):
-    topic = f"{MQTT_BASE_TOPIC}/{gpio}"
+    topic = f"{MQTT_BASE_TOPIC}/GPIO_{gpio}"
     client.publish(topic, json.dumps(data))
 
 # Callback function to run when a GPIO state changes
@@ -102,11 +102,11 @@ def gpio_changed(gpio):
 def send_all_statuses():
     global stable_states, outputs_states
     
-    # Prepare the status of GPIO inputs
-    input_statuses = {gpio: state for gpio, state in stable_states.items()}
+ # Prepare the status of GPIO inputs
+    input_statuses = {f"GPIO_{gpio}": state for gpio, state in stable_states.items()}
     
     # Prepare the status of GPIO outputs
-    output_statuses = {gpio: (True if gpio in outputs_states and outputs_states[gpio].value else False) for gpio in gpio_outputs}
+    output_statuses = {f"GPIO_{gpio}": (True if gpio in outputs_states and outputs_states[gpio].value else False) for gpio in gpio_outputs}
 
     status_message = {
         "inputs": input_statuses,
@@ -118,7 +118,7 @@ def send_all_statuses():
 # Function to send status to MQTT and print to console
 def send_status(gpio):
     global stable_states
-    state = stable_states[gpio]
+    state = stable_states[gpio] and "connected" or "disconnected"
     message = f"GPIO {gpio} is {state} to GND"
     print(message)
     publish_state(gpio, {"connected": state})
@@ -130,7 +130,7 @@ def on_message(client, userdata, message):
         if message.topic == MQTT_TOPIC_STATUS_REQUEST:
             send_all_statuses()
         elif message.topic.startswith(MQTT_BASE_TOPIC) and message.topic.endswith('/set'):
-            gpio = int(message.topic.split('/')[-2])
+            gpio = int(message.topic.split('/')[-2].split('_')[1])
             if gpio in gpio_outputs:
                 data = json.loads(message.payload.decode())
                 power = data.get('power')

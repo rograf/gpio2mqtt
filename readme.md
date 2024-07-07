@@ -23,7 +23,7 @@ gpio_inputs:
   - 17  # GPIO to monitor
 
 gpio_outputs:
-  - 27  # GPIO to control
+  - 18  # GPIO to control
 ```
 
 ## Installation
@@ -54,21 +54,21 @@ sudo python3 main.py
 ```bash
 {
   "inputs": {
-    "17": true  # True if connected to GND, False otherwise
+    "GPIO_17": true  # True if connected to GND, False otherwise
   },
   "outputs": {
-    "27": true  # True if the output is ON, False otherwise
+    "GPIO_18": true  # True if the output is ON, False otherwise
   }
 }
 ```
-- State Update: Published to `gpio2mqtt/{gpio}` for each monitored GPIO change.
+- State Update: Published to `gpio2mqtt/GPIO_{NUMBER}` for each monitored GPIO change.
 ```bash
 {
   "connected": true  # True if connected to GND, False otherwise
 }
 ```
 ### Received Messages
-- Control Message: Received on `gpio2mqtt/{gpio}/set` to control an output GPIO.
+- Control Message: Received on `gpio2mqtt/GPIO_{NUMBER}/set` to control an output GPIO.
 ```bash
 {
   "power": true,  # True to turn ON, False to turn OFF, None to toggle

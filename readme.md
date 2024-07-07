@@ -19,10 +19,10 @@ mqtt:
   password: "YOUR_MQTT_PASSWORD"
   base_topic: "gpio2mqtt"
 
-gpio_to_monitor:
+gpio_inputs:
   - 17  # GPIO pins to monitor for input
 
-gpio_to_control:
+gpio_outputs:
   - 27  # GPIO pins to control for output
 ```
 
@@ -53,7 +53,7 @@ sudo python3 main.py
 - Status Response: Published to `gpio2mqtt/status/response` containing the status of all monitored and controlled GPIO pins.
 ```bash
 {
-  "connected": {
+  "inputs": {
     "17": true  # True if connected to GND, False otherwise
   },
   "outputs": {

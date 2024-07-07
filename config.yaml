@@ -6,10 +6,10 @@ mqtt:
   password: ""
   base_topic: "gpio2mqtt"
 
-gpio_to_monitor:
+gpio_inputs:
   - 17
   - 22
 
-gpio_to_control:
+gpio_outputs:
   - 15
   - 18

@@ -23,105 +23,105 @@ MQTT_TOPIC_STATUS_RESPONSE = f"{MQTT_BASE_TOPIC}/status/response"
 client = mqtt.Client()
 client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
 
-# Define the GPIO pins to monitor and control
-pins_to_monitor = config['gpio_to_monitor']
-pins_to_control = config['gpio_to_control']
+# Define the GPIO to monitor and control
+gpio_inputs = config['gpio_inputs']
+gpio_outputs = config['gpio_outputs']
 
 # Debounce time in seconds
 debounce_time = 0.5
 
 # Timers for debouncing
-timers = {pin: None for pin in pins_to_monitor + pins_to_control}
+timers = {gpio: None for gpio in gpio_inputs + gpio_outputs}
 
 # State dictionary to track stable states
-stable_states = {pin: None for pin in pins_to_monitor}
+stable_states = {gpio: None for gpio in gpio_inputs}
 
 def on_connect(client, userdata, flags, rc):
     print(f"Connected with result code {rc}")
     send_all_statuses()
-    # Subscribing to the control topic for each GPIO pin
+    # Subscribing to the control topic for each GPIO outputs
     client.subscribe(MQTT_TOPIC_STATUS_REQUEST)
-    for pin in pins_to_control:
-        client.subscribe(f"{MQTT_BASE_TOPIC}/{pin}/set")
+    for gpio in gpio_outputs:
+        client.subscribe(f"{MQTT_BASE_TOPIC}/{gpio}/set")
 
-# Function to control relay based on GPIO pin
-gpio_outputs = {}
+# Function to control relay based on GPIO
+outputs_states = {}
 
-def control_relay(pin, power, duration):
-    global gpio_outputs
+def control_relay(gpio, power, duration):
+    global outputs_states
 
     oposite_power = not power
 
     if power is True:
-        if pin not in gpio_outputs:
-            gpio_outputs[pin] = OutputDevice(pin)
-        gpio_outputs[pin].on()
-        publish_state(pin, {
+        if gpio not in outputs_states:
+            outputs_states[gpio] = OutputDevice(gpio)
+        outputs_states[gpio].on()
+        publish_state(gpio, {
             "power": True,
         })
     elif power is False:
-        if pin in gpio_outputs:
-            gpio_outputs[pin].off()  # Ensure to turn off before deleting
-            del gpio_outputs[pin]
-        publish_state(pin, {
+        if gpio in outputs_states:
+            outputs_states[gpio].off()  # Ensure to turn off before deleting
+            del outputs_states[gpio]
+        publish_state(gpio, {
             "power": False,
         })
     elif power is None:
-        if pin in gpio_outputs:
-            control_relay(pin, False, 0)
+        if gpio in outputs_states:
+            control_relay(gpio, False, 0)
             oposite_power = True
         else:
-            control_relay(pin, True, 0)
+            control_relay(gpio, True, 0)
             oposite_power = False
     else:
         print(f"Unknown power state: {power}")
 
     if duration and duration != 0:
         # Toggle the relay after the duration
-        t = Timer(duration / 1000.0, lambda: control_relay(pin, oposite_power, 0))
+        t = Timer(duration / 1000.0, lambda: control_relay(gpio, oposite_power, 0))
         t.start()
 
-def publish_state(gpio_pin, data):
-    topic = f"{MQTT_BASE_TOPIC}/{gpio_pin}"
+def publish_state(gpio, data):
+    topic = f"{MQTT_BASE_TOPIC}/{gpio}"
     client.publish(topic, json.dumps(data))
 
-# Callback function to run when a pin state changes
-def pin_changed(pin):
+# Callback function to run when a GPIO state changes
+def gpio_changed(gpio):
     global stable_states
-    if pin.is_pressed:
-        stable_states[pin.pin.number] = True
+    if gpio.is_pressed:
+        stable_states[gpio.pin.number] = True
     else:
-        stable_states[pin.pin.number] = False
+        stable_states[gpio.pin.number] = False
     
-    if timers[pin.pin.number] is not None:
-        timers[pin.pin.number].cancel()
+    if timers[gpio.pin.number] is not None:
+        timers[gpio.pin.number].cancel()
     
-    timers[pin.pin.number] = Timer(debounce_time, send_status, [pin.pin.number])
-    timers[pin.pin.number].start()
+    timers[gpio.pin.number] = Timer(debounce_time, send_status, [gpio.pin.number])
+    timers[gpio.pin.number].start()
 
 def send_all_statuses():
-    global stable_states, gpio_outputs
+    global stable_states, outputs_states
     
     # Prepare the status of GPIO inputs
-    input_statuses = {pin: state for pin, state in stable_states.items()}
+    input_statuses = {gpio: state for gpio, state in stable_states.items()}
     
     # Prepare the status of GPIO outputs
-    output_statuses = {pin: (True if pin in gpio_outputs and gpio_outputs[pin].value else False) for pin in pins_to_control}
+    output_statuses = {gpio: (True if gpio in outputs_states and outputs_states[gpio].value else False) for gpio in gpio_outputs}
 
     status_message = {
-        "connected": input_statuses,
+        "inputs": input_statuses,
         "outputs": output_statuses
     }
     print(f"Sending all statuses: {status_message}")
     client.publish(MQTT_TOPIC_STATUS_RESPONSE, json.dumps(status_message))
 
 # Function to send status to MQTT and print to console
-def send_status(pin_number):
+def send_status(gpio):
     global stable_states
-    state = stable_states[pin_number]
-    message = f"Pin {pin_number} is {state} to GND"
+    state = stable_states[gpio]
+    message = f"GPIO {gpio} is {state} to GND"
     print(message)
-    publish_state(pin_number, {"connected": state})
+    publish_state(gpio, {"connected": state})
 
 # Callback function for MQTT messages
 def on_message(client, userdata, message):
@@ -130,14 +130,14 @@ def on_message(client, userdata, message):
         if message.topic == MQTT_TOPIC_STATUS_REQUEST:
             send_all_statuses()
         elif message.topic.startswith(MQTT_BASE_TOPIC) and message.topic.endswith('/set'):
-            gpio_pin = int(message.topic.split('/')[-2])
-            if gpio_pin in pins_to_control:
+            gpio = int(message.topic.split('/')[-2])
+            if gpio in gpio_outputs:
                 data = json.loads(message.payload.decode())
                 power = data.get('power')
                 duration = data.get('duration', 0)
-                control_relay(gpio_pin, power, duration)
+                control_relay(gpio, power, duration)
             else:
-                print(f"GPIO pin {gpio_pin} is not configured for control")
+                print(f"GPIO {gpio} is not configured for control")
         else:
             print(f"Ignoring MQTT message on unexpected topic: {message.topic}")
     except Exception as e:
@@ -146,25 +146,25 @@ def on_message(client, userdata, message):
 client.on_connect = on_connect
 client.on_message = on_message
 
-# Function to get initial pin states
+# Function to get initial GPIO states
 def get_initial_states():
     global stable_states
-    for pin in pins_to_monitor:
-        button = Button(pin, pull_up=True)
-        stable_states[pin] = button.is_pressed
+    for gpio in gpio_inputs:
+        button = Button(gpio, pull_up=True)
+        stable_states[gpio] = button.is_pressed
 
-# Get initial pin states
+# Get initial GPIO states
 get_initial_states()
 
 
 
-# Set up the GPIO pins as inputs with pull-up resistors
-buttons = [Button(pin, pull_up=True) for pin in pins_to_monitor]
+# Set up the GPIO GPIO as inputs with pull-up resistors
+buttons = [Button(gpio, pull_up=True) for gpio in gpio_inputs]
 
-# Attach the callback function to each pin
+# Attach the callback function to each GPIO
 for button in buttons:
-    button.when_pressed = lambda btn=button: pin_changed(btn)
-    button.when_released = lambda btn=button: pin_changed(btn)
+    button.when_pressed = lambda btn=button: gpio_changed(btn)
+    button.when_released = lambda btn=button: gpio_changed(btn)
 
 # Connect to MQTT broker
 client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)

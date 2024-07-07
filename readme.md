@@ -4,7 +4,7 @@
 This project is licensed for non-commercial use. You are allowed to use, modify, and distribute this code for non-commercial purposes, provided that you include proper attribution to the author, Rafał Rogulski.
 
 ## Introduction
-This project bridges GPIO inputs and outputs on a Raspberry Pi to MQTT topics. It allows you to monitor and control GPIO pins remotely via MQTT.
+This project bridges GPIO inputs and outputs on a Raspberry Pi to MQTT topics. It allows you to monitor and control GPIO remotely via MQTT.
 
 ## Configuration
 
@@ -20,10 +20,10 @@ mqtt:
   base_topic: "gpio2mqtt"
 
 gpio_inputs:
-  - 17  # GPIO pins to monitor for input
+  - 17  # GPIO to monitor
 
 gpio_outputs:
-  - 27  # GPIO pins to control for output
+  - 27  # GPIO to control
 ```
 
 ## Installation
@@ -49,8 +49,8 @@ sudo python3 main.py
 ## MQTT Messages
 
 ### Generated Messages
-- Status Request: Sent to `gpio2mqtt/status/request` to request the status of all monitored and controlled GPIO pins.
-- Status Response: Published to `gpio2mqtt/status/response` containing the status of all monitored and controlled GPIO pins.
+- Status Request: Sent to `gpio2mqtt/status/request` to request the status of all monitored and controlled GPIO.
+- Status Response: Published to `gpio2mqtt/status/response` containing the status of all monitored and controlled GPIO.
 ```bash
 {
   "inputs": {
@@ -61,14 +61,14 @@ sudo python3 main.py
   }
 }
 ```
-- State Update: Published to `gpio2mqtt/{pin}` for each monitored pin change.
+- State Update: Published to `gpio2mqtt/{gpio}` for each monitored GPIO change.
 ```bash
 {
   "connected": true  # True if connected to GND, False otherwise
 }
 ```
 ### Received Messages
-- Control Message: Received on `gpio2mqtt/{pin}/set` to control an output pin.
+- Control Message: Received on `gpio2mqtt/{gpio}/set` to control an output GPIO.
 ```bash
 {
   "power": true,  # True to turn ON, False to turn OFF, None to toggle

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT Client</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container-fluid mt-5">
+    <h1 class="mb-4">MQTT Client</h1>
+
+    <!-- Formularz do podania danych logowania -->
+    <form id="connectionForm" class="mb-4">
+        <div class="mb-4">
+            <button type="button" class="btn btn-link btn-sm p-0" onclick="importStorageFromJson()">Import JSON</button>
+        </div>
+        <div class="form-group">
+            <label for="brokerUrl">Broker URL</label>
+            <input type="text" class="form-control" id="brokerUrl" placeholder="Enter broker URL">
+        </div>
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" class="form-control" id="username" placeholder="Enter username">
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" class="form-control" id="password" placeholder="Enter password">
+        </div>
+        <button type="button" class="btn btn-primary" onclick="connectToMQTT()">Connect</button>
+    </form>
+
+
+    <div id="controlPanel" style="display: none;">
+
+      <div class="mb-4">
+        <div>
+          <button type="button" class="btn btn-link btn-sm p-0 mr-5" onclick="logout()">Logout</button>
+          <button type="button" class="btn btn-link btn-sm p-0 mr-3" onclick="exportStorageToJson()">Export JSON</button>
+          <button type="button" class="btn btn-link btn-sm p-0" onclick="importStorageFromJson()">Import JSON</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Formularz do wysyłania wiadomości -->
+        <form id="messageForm" class="col-md-3">
+           <h3>Create Actions</h3>
+           <div class="form-group">
+                <label for="topic">Topic</label>
+                <input type="text" class="form-control" id="topic" placeholder="Enter topic">
+            </div>
+            <div class="form-group">
+                <label for="message">Message</label>
+                <textarea class="form-control" id="message" rows="3" placeholder="Enter message"></textarea>
+            </div>
+            <button type="button" class="btn btn-success" onclick="saveAction()">Save Message</button>
+            <button type="button" class="btn btn-primary" onclick="sendMessage()">Send Message</button>
+        </form>
+    
+         <div class="col-md-3">
+           <h3>Saved Actions</h3>
+           <ul id="savedActions" class="list-group"></ul>
+         </div>
+
+         <div class="col-md-6">
+            <h3>Received Messages</h3>
+            <ul id="receivedMessages" class="list-group"></ul>
+            <button type="button" class="btn btn-danger btn-sm mt-3" onclick="clearMessages()">Clear Messages</button>
+         </div>
+    
+      </div>
+    </div>
+</div>
+
+<!-- Mqtt.js -->
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+    let client;
+
+    function connectToMQTT() {
+        let brokerUrl = document.getElementById('brokerUrl').value;
+
+        // Sprawdź, czy URL zaczyna się od wss://, jeśli nie, dodaj prefiks
+        if (!brokerUrl.startsWith('wss://')) {
+            brokerUrl = 'wss://' + brokerUrl;
+        }
+
+        // Ustawienie domyślnego portu 8884 dla wss, jeśli użytkownik nie podał portu
+        if (!brokerUrl.endsWith(':8884/mqtt')) {
+            brokerUrl += ':8884/mqtt';
+        }
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        // Save credentials to localStorage
+        localStorage.setItem('brokerUrl', brokerUrl);
+        localStorage.setItem('username', username);
+        localStorage.setItem('password', password);
+
+        const options = {
+            clean: true,
+            connectTimeout: 4000,
+            clientId: 'mqttjs_' + Math.random().toString(16).substr(2, 8),
+            username: username,
+            password: password,
+            protocol: 'wss',
+            rejectUnauthorized: false // SSL verification off for now
+        };
+
+        console.log('Connecting to MQTT broker at ' + brokerUrl);
+
+        client = mqtt.connect(brokerUrl, options);
+
+        client.on('connect', () => {
+            console.log('Successfully connected to MQTT broker');
+            controlPanel.style.display = 'block';
+            client.subscribe('#', function (err) {
+                if (!err) {
+                    console.log("Subscribed to all topics (#)");
+                } else {
+                    console.error("Subscription error: ", err);
+                }
+            });
+            removeConnectionOption(); // Remove connection form on success
+        });
+
+        client.on('message', (topic, message) => {
+            console.log(`Message received on topic ${topic}: ${message.toString()}`);
+            displayMessage(topic, message.toString());
+        });
+
+        client.on('error', (err) => {
+            console.error('Connection error: ', err);
+            client.end();
+        });
+
+        client.on('close', () => {
+            console.log('Connection closed');
+        });
+
+        client.on('reconnect', () => {
+            console.log('Reconnecting to broker...');
+        });
+
+        client.on('offline', () => {
+            console.log('Broker is offline');
+        });
+    }
+
+    function sendMessage() {
+        const topic = document.getElementById('topic').value;
+        const message = document.getElementById('message').value;
+
+        if (client && client.connected) {
+            const payload = message;
+            client.publish(topic, payload);
+            console.log(`Message sent to topic ${topic}: ${payload}`);
+        } else {
+            console.error('Client not connected');
+        }
+    }
+
+    function saveAction() {
+        const topic = document.getElementById('topic').value;
+        const message = document.getElementById('message').value;
+        const action = {
+            topic: topic,
+            message: message
+        };
+
+        let savedActions = JSON.parse(localStorage.getItem('savedActions')) || [];
+        savedActions.push(action);
+        localStorage.setItem('savedActions', JSON.stringify(savedActions));
+        displaySavedActions();
+    }
+
+    function displaySavedActions() {
+    const savedActions = JSON.parse(localStorage.getItem('savedActions')) || [];
+    const savedActionsList = document.getElementById('savedActions');
+    savedActionsList.innerHTML = ''; // Clear current list
+
+    savedActions.forEach((action, index) => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+
+        // Create the structure with h4 for topic and p for message
+        const topicElement = document.createElement('h5');
+        topicElement.textContent = action.topic;
+
+        const messageElement = document.createElement('p');
+        messageElement.textContent = action.message;
+
+        // Add buttons for resend and delete
+        const resendButton = document.createElement('button');
+        resendButton.className = 'btn btn-primary btn-sm';
+        resendButton.textContent = 'Resend';
+        resendButton.onclick = () => resendAction(index);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'btn btn-danger btn-sm ml-2';
+        deleteButton.textContent = 'Delete';
+        deleteButton.onclick = () => deleteAction(index);
+
+        // Append the topic, message, and buttons to the list item
+        li.appendChild(topicElement);
+        li.appendChild(messageElement);
+        li.appendChild(resendButton);
+        li.appendChild(deleteButton);
+
+        // Append the list item to the saved actions list
+        savedActionsList.appendChild(li);
+    });
+}
+    function resendAction(index) {
+        const savedActions = JSON.parse(localStorage.getItem('savedActions')) || [];
+        const action = savedActions[index];
+
+        if (client && client.connected) {
+            const payload = action.message;
+            client.publish(action.topic, payload);
+            console.log(`Resent message to topic ${action.topic}: ${payload}`);
+        } else {
+            console.error('Client not connected');
+        }
+    }
+
+    function deleteAction(index) {
+        const savedActions = JSON.parse(localStorage.getItem('savedActions')) || [];
+        savedActions.splice(index, 1);
+        localStorage.setItem('savedActions', JSON.stringify(savedActions));
+        displaySavedActions();
+    }
+
+    function displayMessage(topic, message) {
+        const receivedMessagesList = document.getElementById('receivedMessages');
+
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+
+        // Tworzenie struktury z h5 dla topic i p dla message
+        const topicElement = document.createElement('h5');
+        topicElement.textContent = topic;
+
+        const messageElement = document.createElement('p');
+        messageElement.textContent = message;
+
+        // Dodanie elementów do li
+        li.appendChild(topicElement);
+        li.appendChild(messageElement);
+
+        // Dodanie li na początku listy receivedMessages
+        if (receivedMessagesList.firstChild) {
+            receivedMessagesList.insertBefore(li, receivedMessagesList.firstChild);
+        } else {
+            receivedMessagesList.appendChild(li);
+        }
+    }
+
+    function removeConnectionOption() {
+        document.getElementById('connectionForm').remove();
+    }
+
+    function clearMessages() {
+        document.getElementById('receivedMessages').innerHTML = '';
+    }
+
+    function logout() {
+        localStorage.removeItem('brokerUrl');
+        localStorage.removeItem('username');
+        localStorage.removeItem('password');
+        localStorage.removeItem('savedActions');
+        location.reload();
+    }
+
+    function exportStorageToJson() {
+      const data = {
+        brokerUrl: localStorage.getItem('brokerUrl'),
+        username: localStorage.getItem('username'),
+        password: localStorage.getItem('password'),
+        savedActions: JSON.parse(localStorage.getItem('savedActions'))
+      };
+
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute('href', dataStr);
+      downloadAnchorNode.setAttribute('download', 'data.json');
+      downloadAnchorNode.click();
+    }
+
+    function importStorageFromJson(){
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.click();
+      input.onchange = e => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+          const data = JSON.parse(reader.result);
+          localStorage.setItem('brokerUrl', data.brokerUrl);
+          localStorage.setItem('username', data.username);
+          localStorage.setItem('password', data.password);
+          localStorage.setItem('savedActions', JSON.stringify(data.savedActions));
+          location.reload();
+        };
+        reader.readAsText(file);
+      }
+
+    }
+
+    window.onload = function() {
+        document.getElementById('brokerUrl').value = localStorage.getItem('brokerUrl') || '';
+        document.getElementById('username').value = localStorage.getItem('username') || '';
+        document.getElementById('password').value = localStorage.getItem('password') || '';
+        displaySavedActions();
+        if(localStorage.getItem('brokerUrl') && localStorage.getItem('username') && localStorage.getItem('password')) {
+          connectToMQTT();
+        }
+    }
+</script>
+
+</body>
+</html>

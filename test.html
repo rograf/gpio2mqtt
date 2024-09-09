@@ -4,14 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MQTT Client</title>
-    <!-- Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
 <div class="container-fluid mt-5">
     <h1 class="mb-4">MQTT Client</h1>
 
-    <!-- Formularz do podania danych logowania -->
     <form id="connectionForm" class="mb-4">
         <div class="mb-4">
             <button type="button" class="btn btn-link btn-sm p-0" onclick="importStorageFromJson()">Import JSON</button>
@@ -43,7 +41,6 @@
       </div>
 
       <div class="row">
-        <!-- Formularz do wysyłania wiadomości -->
         <form id="messageForm" class="col-md-3">
            <h3>Create Actions</h3>
            <div class="form-group">
@@ -73,7 +70,6 @@
     </div>
 </div>
 
-<!-- Mqtt.js -->
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script>
     let client;
@@ -81,12 +77,10 @@
     function connectToMQTT() {
         let brokerUrl = document.getElementById('brokerUrl').value;
 
-        // Sprawdź, czy URL zaczyna się od wss://, jeśli nie, dodaj prefiks
         if (!brokerUrl.startsWith('wss://')) {
             brokerUrl = 'wss://' + brokerUrl;
         }
 
-        // Ustawienie domyślnego portu 8884 dla wss, jeśli użytkownik nie podał portu
         if (!brokerUrl.endsWith(':8884/mqtt')) {
             brokerUrl += ':8884/mqtt';
         }
@@ -94,7 +88,6 @@
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
 
-        // Save credentials to localStorage
         localStorage.setItem('brokerUrl', brokerUrl);
         localStorage.setItem('username', username);
         localStorage.setItem('password', password);
@@ -106,7 +99,6 @@
             username: username,
             password: password,
             protocol: 'wss',
-            rejectUnauthorized: false // SSL verification off for now
         };
 
         console.log('Connecting to MQTT broker at ' + brokerUrl);
@@ -123,7 +115,6 @@
                     console.error("Subscription error: ", err);
                 }
             });
-            removeConnectionOption(); // Remove connection form on success
         });
 
         client.on('message', (topic, message) => {
@@ -179,20 +170,17 @@
     function displaySavedActions() {
     const savedActions = JSON.parse(localStorage.getItem('savedActions')) || [];
     const savedActionsList = document.getElementById('savedActions');
-    savedActionsList.innerHTML = ''; // Clear current list
 
     savedActions.forEach((action, index) => {
         const li = document.createElement('li');
         li.className = 'list-group-item';
 
-        // Create the structure with h4 for topic and p for message
         const topicElement = document.createElement('h5');
         topicElement.textContent = action.topic;
 
         const messageElement = document.createElement('p');
         messageElement.textContent = action.message;
 
-        // Add buttons for resend and delete
         const resendButton = document.createElement('button');
         resendButton.className = 'btn btn-primary btn-sm';
         resendButton.textContent = 'Resend';
@@ -203,13 +191,11 @@
         deleteButton.textContent = 'Delete';
         deleteButton.onclick = () => deleteAction(index);
 
-        // Append the topic, message, and buttons to the list item
         li.appendChild(topicElement);
         li.appendChild(messageElement);
         li.appendChild(resendButton);
         li.appendChild(deleteButton);
 
-        // Append the list item to the saved actions list
         savedActionsList.appendChild(li);
     });
 }
@@ -239,18 +225,15 @@
         const li = document.createElement('li');
         li.className = 'list-group-item';
 
-        // Tworzenie struktury z h5 dla topic i p dla message
         const topicElement = document.createElement('h5');
         topicElement.textContent = topic;
 
         const messageElement = document.createElement('p');
         messageElement.textContent = message;
 
-        // Dodanie elementów do li
         li.appendChild(topicElement);
         li.appendChild(messageElement);
 
-        // Dodanie li na początku listy receivedMessages
         if (receivedMessagesList.firstChild) {
             receivedMessagesList.insertBefore(li, receivedMessagesList.firstChild);
         } else {

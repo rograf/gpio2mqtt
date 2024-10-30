@@ -7,10 +7,13 @@ import json
 import gc
 from _thread import start_new_thread
 import tls
+import time 
 
 # Load configuration from JSON file
 with open('config.json', 'r') as jsonfile:
     config = json.load(jsonfile)
+
+CONFIG_PASSWORD = config['password']
 
 # Wi-Fi settings
 WIFI_SSID = config['wifi']['ssid']
@@ -26,27 +29,41 @@ MQTT_CLIENT_ID = config['mqtt']['client_id']
 MQTT_BASE_TOPIC = config['mqtt']['base_topic']
 MQTT_TOPIC_STATUS_REQUEST = f"{MQTT_BASE_TOPIC}/status/request"
 MQTT_TOPIC_STATUS_RESPONSE = f"{MQTT_BASE_TOPIC}/status/response"
+MQTT_TOPIC_STATUS_UPDATE = f"{MQTT_BASE_TOPIC}/update"
 
 # GPIO configuration
 gpio_inputs = config['gpio_inputs']
 gpio_outputs = config['gpio_outputs']
+DEBOUNCE_TIME_MS = config['debounce_time_ms']  # Time in milliseconds for debounce
 
 # MQTT client with TLS/SSL if secure is enabled
-context = tls.SSLContext(tls.PROTOCOL_TLS_CLIENT)
-context.verify_mode = tls.CERT_NONE
-client = MQTTClient(
-    client_id=MQTT_CLIENT_ID,
-    server=MQTT_SERVER,
-    port=MQTT_PORT,
-    user=MQTT_USERNAME,
-    password=MQTT_PASSWORD,
-    keepalive=7200,
-    ssl=context
-)
+if MQTT_SECURE:
+    ssl_context = tls.SSLContext(tls.PROTOCOL_TLS_CLIENT)
+    ssl_context.verify_mode = tls.CERT_NONE
+    client = MQTTClient(
+        client_id=MQTT_CLIENT_ID,
+        server=MQTT_SERVER,
+        port=MQTT_PORT,
+        user=MQTT_USERNAME,
+        password=MQTT_PASSWORD,
+        keepalive=7200,
+        ssl=ssl_context
+    )
+else:
+    client = MQTTClient(
+        client_id=MQTT_CLIENT_ID,
+        server=MQTT_SERVER,
+        port=MQTT_PORT,
+        user=MQTT_USERNAME,
+        password=MQTT_PASSWORD,
+        keepalive=7200
+    )
 
 # GPIO states
 input_states = {gpio: None for gpio in gpio_inputs}
 output_states = {}
+debounce_timers = {}  # Debounce timers for each input pin
+previous_states = {}  # Track the previous state for each input
 
 # List to track output durations
 output_durations = {}
@@ -96,6 +113,7 @@ def mqtt_connect():
             print(f"Attempting to connect to MQTT broker (attempt {attempt+1})...")
             client.connect()
             client.subscribe(MQTT_TOPIC_STATUS_REQUEST)
+            client.subscribe(MQTT_TOPIC_STATUS_UPDATE)
             for gpio in gpio_outputs:
                 client.subscribe(f"{MQTT_BASE_TOPIC}/GPIO_{gpio}/set")
             connected = True
@@ -113,38 +131,69 @@ def publish_state(gpio, data):
     client.publish(topic, json.dumps(data))
     print(f"MQTT message sent to topic {topic}: {data}")
 
-# Function to control output GPIO
+# Function to turn on the GPIO pin
+def turn_on_gpio(gpio):
+    pin = Pin(gpio, Pin.OUT)  # Set the pin as an output
+    pin.value(1)  # Turn GPIO ON
+    output_states[gpio] = True
+    publish_state(gpio, {"power": True})
+
+# Function to turn off the GPIO pin
+def turn_off_gpio(gpio):
+    pin = Pin(gpio, Pin.OUT)  # Set the pin as an output
+    pin.value(0)  # Turn GPIO OFF
+    pin.init(Pin.IN)  # Switch pin to input mode
+    output_states[gpio] = False
+    publish_state(gpio, {"power": False})
+
+# Function to control the relay with duration
 def control_relay(gpio, power, duration):
-
-    pin = Pin(gpio, Pin.OUT)
+    pin = Pin(gpio, Pin.OUT)  # Set the pin as an output
     current_state = pin.value()
-    
-    # If power is True and pin is off, turn it on
-    if power is True and current_state == 1:
-        pin.value(0)
-        output_states[gpio] = True
-        publish_state(gpio, {"power": True})
 
-    elif power is False and current_state == 0:
-        pin.value(1)
-        output_states[gpio] = False
-        publish_state(gpio, {"power": False})
-    
-    if duration and duration != 0:
-        output_durations[gpio] = {
-            "start_time": time.ticks_ms(),
-            "duration": duration,
-            "power": not power
-        }
+    # If power is True, pin is off, and duration is set, turn on the GPIO
+    if power and current_state == 0 and duration != 0:
+        turn_on_gpio(gpio)
+        time.sleep(duration / 1000)  # Convert milliseconds to seconds
+        turn_off_gpio(gpio)
 
-
+    # If power is False, pin is on, and duration is set, turn off the GPIO
+    elif not power and current_state == 1 and duration != 0:
+        turn_off_gpio(gpio)
+        time.sleep(duration / 1000)  # Convert milliseconds to seconds
+        turn_on_gpio(gpio)
+        
 # Function to handle GPIO input state change
 def gpio_changed(pin):
     gpio = pin_number_map[pin]
-    if input_states[gpio] != (not pin.value()):
-      input_states[gpio] = not pin.value()
-      send_status(gpio)
 
+    # Stop any existing debounce timer
+    if gpio in debounce_timers and debounce_timers[gpio] is not None:
+        debounce_timers[gpio].deinit()
+    
+    # Start a new debounce timer
+    debounce_timers[gpio] = Timer()
+    debounce_timers[gpio].init(
+        period=DEBOUNCE_TIME_MS, mode=Timer.ONE_SHOT,
+        callback=lambda t: handle_debounce(gpio, pin.value())
+    )
+    
+def handle_debounce(gpio, current_state):
+    """Handle the debounced GPIO input state change."""
+    inverted_state = 0 if current_state == 1 else 1
+    previous_state = previous_states.get(gpio)
+
+    # Update the state for input pins
+    input_states[gpio] = current_state == 0
+
+    # Check for state change
+    if inverted_state != previous_state:
+        print(f"Input Pin {gpio} state changed to: {inverted_state}")
+        send_status(gpio)
+
+    # Store the new state
+    previous_states[gpio] = inverted_state
+    
 # Function to send the status of all GPIO
 def send_all_statuses():
     input_statuses = {f"GPIO_{gpio}": state for gpio, state in input_states.items()}
@@ -169,6 +218,8 @@ def on_message(topic, msg):
     print(f"Received MQTT message on topic {topic}: {msg}")
     if topic == MQTT_TOPIC_STATUS_REQUEST.encode():  # Convert to bytes
         send_all_statuses()
+    if topic == MQTT_TOPIC_STATUS_UPDATE.encode():
+         handle_update(json.loads(msg))
     elif topic.startswith(MQTT_BASE_TOPIC.encode()) and topic.endswith(b'/set'):  # Convert to bytes
         gpio = int(topic.split(b'/')[-2].split(b'_')[1])  # Parse as bytes
         if gpio in gpio_outputs:
@@ -181,6 +232,32 @@ def on_message(topic, msg):
 def mqtt_init():
     client.set_callback(on_message)
     mqtt_connect()
+    
+# Update Config MQTT
+def handle_update(data):
+    global config
+    
+    # Verify the password
+    if 'password' not in data or data['password'] != CONFIG_PASSWORD:
+        print("Invalid password")
+        return
+    
+    # Check if a new password is provided
+    if 'new_password' in data:
+        config['password'] = data['new_password']  # Replace the old password with the new one
+        print("Password updated")
+    
+    # Update other config values, excluding password-related fields
+    for key, value in data.items():
+        if key in config and key != 'password':  # Ensure 'password' is managed separately
+            config[key] = value
+    
+    # Save updated config back to file
+    with open('config.json', 'w') as jsonfile:
+        json.dump(config, jsonfile)
+    
+    print("Config updated, restarting...")
+    machine.reset()  # Restart the device
 
 # Non-blocking function to handle output durations
 def check_output_durations():

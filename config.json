@@ -14,6 +14,7 @@
   },
   "gpio_inputs": [16, 22],
   "gpio_outputs": [15, 20],
-  "debounce_time_ms": 500
+  "debounce_time_ms": 500,
+  "password": "a"
 }
 

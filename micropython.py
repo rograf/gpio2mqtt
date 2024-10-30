@@ -13,7 +13,8 @@ import time
 with open('config.json', 'r') as jsonfile:
     config = json.load(jsonfile)
 
-CONFIG_PASSWORD = config['password']
+# Device password if not exist set to abc
+CONFIG_PASSWORD = config['password'] if 'password' in config else False
 
 # Wi-Fi settings
 WIFI_SSID = config['wifi']['ssid']
@@ -237,6 +238,10 @@ def mqtt_init():
 def handle_update(data):
     global config
     
+    if CONFIG_PASSWORD is False:
+        print("Password not set. Please set a password in the config file.")
+        return
+
     # Verify the password
     if 'password' not in data or data['password'] != CONFIG_PASSWORD:
         print("Invalid password")
@@ -325,9 +330,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-

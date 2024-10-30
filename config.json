@@ -1,0 +1,19 @@
+{
+  "wifi": {
+      "ssid": "a",
+      "password": "a"
+  },
+  "mqtt": {
+      "server": "a",
+      "port": 8883,
+      "secure": true,
+      "username": "a",
+      "password": "a",
+      "client_id": "gpio2mqtt",
+      "base_topic": "gpio2mqtt"
+  },
+  "gpio_inputs": [16, 22],
+  "gpio_outputs": [15, 20],
+  "debounce_time_ms": 500
+}
+

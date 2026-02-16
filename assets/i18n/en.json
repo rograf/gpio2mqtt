@@ -1,0 +1,94 @@
+{
+  "app": {
+    "title": "GPIO2MQTT",
+    "logout": "Logout",
+    "login": "Login",
+    "password": "Password",
+    "incorrectPassword": "Incorrect password"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "config": "Configuration"
+  },
+  "mqtt": {
+    "status": "MQTT",
+    "connected": "Connected",
+    "disconnected": "Disconnected"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "clickToEdit": "Click on GPIO pin to edit",
+    "legend": {
+      "unused": "Unused",
+      "monitor": "Monitor",
+      "control": "Control",
+      "uart": "UART"
+    },
+    "config": {
+      "name": "Name",
+      "namePlaceholder": "e.g. Main relay",
+      "type": "Type",
+      "typeMonitor": "Monitor",
+      "typeControl": "Control",
+      "save": "Save",
+      "delete": "Delete configuration",
+      "confirmDelete": "Are you sure you want to delete this GPIO configuration?",
+      "typeRequired": "Select GPIO type",
+      "saveError": "Save error",
+      "deleteError": "Error deleting configuration"
+    },
+    "control": {
+      "duration": "Duration",
+      "action": "Action",
+      "actionOn": "Turn on",
+      "actionOff": "Turn off",
+      "actionToggle": "Toggle",
+      "send": "Send"
+    },
+    "history": {
+      "title": "History",
+      "loading": "Loading...",
+      "empty": "No history",
+      "loadError": "Error loading history"
+    }
+  },
+  "config": {
+    "title": "Configuration",
+    "saved": "Saved",
+    "saveError": "Save error",
+    "app": {
+      "title": "Application",
+      "changePassword": "Change password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "changePasswordBtn": "Change password",
+      "passwordMismatch": "Passwords do not match",
+      "restart": "Restart",
+      "restartApp": "Restart application",
+      "confirmRestart": "Restart application?"
+    },
+    "mqtt": {
+      "title": "MQTT",
+      "broker": "Broker",
+      "brokerPlaceholder": "mqtt://host:1883",
+      "topic": "Topic",
+      "topicPlaceholder": "gpio2mqtt",
+      "username": "Username",
+      "password": "Password",
+      "save": "Save MQTT"
+    },
+    "uart": {
+      "title": "UART",
+      "enable": "Enable UART",
+      "name": "Name",
+      "namePlaceholder": "e.g. Distance sensor",
+      "interval": "Interval",
+      "script": "Script (uart.js)",
+      "save": "Save UART",
+      "required": "Name is required when UART is enabled",
+      "intervalRequired": "Interval must be greater than 0 when UART is enabled",
+      "scriptRequired": "Script is required when UART is enabled"
+    }
+  }
+}

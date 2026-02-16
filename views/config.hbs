@@ -1,0 +1,256 @@
+<div class="container mt-3">
+    {{#if message}}
+        <div class="alert alert-success">{{message}}</div>
+    {{/if}}
+    {{#if error}}
+        <div class="alert alert-danger">{{error}}</div>
+    {{/if}}
+
+    <div class="row g-3 align-items-stretch">
+        <div class="col-12 col-lg-6 d-flex">
+            <div class="card flex-fill">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title mb-3">{{t.config.app.title}}</h5>
+                    <form method="POST" action="/config" class="d-flex flex-column flex-grow-1">
+                        <input type="hidden" name="section" value="app">
+
+                        <div class="mb-3">
+                            <h6 class="mb-2">{{t.config.app.changePassword}}</h6>
+                            <div class="mb-2">
+                                <label class="form-label mb-1">{{t.config.app.currentPassword}} <span class="text-danger">*</span></label>
+                                <input class="form-control" type="password" name="currentPassword" required>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label mb-1">{{t.config.app.newPassword}} <span class="text-danger">*</span></label>
+                                <input class="form-control" type="password" name="newPassword" id="newPassword" required>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label mb-1">{{t.config.app.confirmPassword}} <span class="text-danger">*</span></label>
+                                <input class="form-control" type="password" name="confirmPassword" id="confirmPassword" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <h6 class="mb-2">{{t.config.app.restart}}</h6>
+                            <button type="button" class="btn btn-outline-danger" onclick="if(confirm('{{t.config.app.confirmRestart}}')) { document.getElementById('restartForm').submit(); }">{{t.config.app.restartApp}}</button>
+                        </div>
+
+                        <div class="text-end mt-auto pt-3">
+                            <button class="btn btn-primary" type="submit">{{t.config.app.changePasswordBtn}}</button>
+                        </div>
+                    </form>
+                    <form method="POST" action="/restart" id="restartForm" style="display:none;"></form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6 d-flex">
+            <div class="card flex-fill">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title mb-3">{{t.config.mqtt.title}}</h5>
+                    <form method="POST" action="/config" class="d-flex flex-column flex-grow-1">
+                        <input type="hidden" name="section" value="mqtt">
+
+                        <div class="mb-2">
+                            <label class="form-label mb-1">{{t.config.mqtt.broker}}</label>
+                            <input class="form-control" name="mqttBroker" placeholder="{{t.config.mqtt.brokerPlaceholder}}" value="{{mqtt.broker}}">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label mb-1">{{t.config.mqtt.topic}}</label>
+                            <input class="form-control" name="mqttTopic" placeholder="{{t.config.mqtt.topicPlaceholder}}" value="{{mqtt.topic}}">
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label mb-1">{{t.config.mqtt.username}}</label>
+                                <input class="form-control" name="mqttUsername" value="{{mqtt.username}}">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label mb-1">{{t.config.mqtt.password}}</label>
+                                <input class="form-control" type="password" name="mqttPassword" value="{{mqtt.password}}">
+                            </div>
+                        </div>
+
+                        <div class="text-end mt-auto pt-3">
+                            <button class="btn btn-primary" type="submit">{{t.config.mqtt.save}}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">{{t.config.uart.title}}</h5>
+                    
+                    <form method="POST" action="/config" id="uartForm">
+                        <input type="hidden" name="section" value="uart">
+                        <input type="hidden" name="uartIntervalMinutes" id="hiddenInterval" value="{{#if uart.intervalMinutes}}{{uart.intervalMinutes}}{{else}}0{{/if}}">
+
+                        <div class="row">
+                            <div class="col-12 col-lg-3">
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enableUart">
+                                        <label class="form-check-label" for="enableUart">{{t.config.uart.enable}}</label>
+                                    </div>
+                                </div>
+
+                                <div id="uartFields" style="display: none;">
+                                    <div class="mb-2">
+                                        <label class="form-label mb-1">{{t.config.uart.name}} <span class="text-danger">*</span></label>
+                                        <input class="form-control" name="uartName" id="uartName" placeholder="{{t.config.uart.namePlaceholder}}" value="{{uart.name}}" required>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label mb-1">{{t.config.uart.interval}}: <strong id="intervalLabel">1 min</strong></label>
+                                        <input type="range" class="form-range" id="intervalSlider" min="1" max="300" step="1" value="1">
+                                        <div class="input-group input-group-sm mt-2">
+                                            <input type="number" class="form-control" id="intervalCustom" min="1" value="1">
+                                            <span class="input-group-text">min</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-lg-9" id="uartScriptSection" style="display: none;">
+                                <div class="mb-2">
+                                    <label class="form-label mb-1">{{t.config.uart.script}}</label>
+                                    <textarea class="form-control" name="uartScript" id="uartScript" rows="10" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">{{uart.script}}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-end mt-3">
+                            <button class="btn btn-primary" type="submit">{{t.config.uart.save}}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const t = {{{json t.config}}};
+
+    function updateUartFields() {
+        const enableUart = document.getElementById('enableUart');
+        const uartFields = document.getElementById('uartFields');
+        const uartScriptSection = document.getElementById('uartScriptSection');
+        const nameInput = document.getElementById('uartName');
+        const scriptInput = document.getElementById('uartScript');
+        const hiddenInterval = document.getElementById('hiddenInterval');
+        const intervalCustom = document.getElementById('intervalCustom');
+
+        if (!enableUart || !uartFields) return;
+
+        if (enableUart.checked) {
+            uartFields.style.display = 'block';
+            uartScriptSection.style.display = 'block';
+            nameInput.required = true;
+            scriptInput.required = true;
+            hiddenInterval.value = parseInt(intervalCustom.value) || 1;
+        } else {
+            uartFields.style.display = 'none';
+            uartScriptSection.style.display = 'none';
+            nameInput.required = false;
+            scriptInput.required = false;
+            hiddenInterval.value = '0';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const enableUart = document.getElementById('enableUart');
+        const intervalSlider = document.getElementById('intervalSlider');
+        const intervalCustom = document.getElementById('intervalCustom');
+        const intervalLabel = document.getElementById('intervalLabel');
+        const hiddenInterval = document.getElementById('hiddenInterval');
+        const uartForm = document.getElementById('uartForm');
+
+        // Password validation
+        const newPassword = document.getElementById('newPassword');
+        const confirmPassword = document.getElementById('confirmPassword');
+        
+        if (confirmPassword) {
+            confirmPassword.addEventListener('input', function() {
+                if (newPassword.value !== confirmPassword.value) {
+                    confirmPassword.setCustomValidity(t.app.passwordMismatch);
+                } else {
+                    confirmPassword.setCustomValidity('');
+                }
+            });
+        }
+
+        // Initialize checkbox based on current interval value
+        const currentInterval = parseInt(hiddenInterval.value) || 0;
+        if (currentInterval > 0) {
+            enableUart.checked = true;
+            intervalSlider.value = currentInterval;
+            intervalCustom.value = currentInterval;
+            intervalLabel.textContent = currentInterval + ' min';
+        } else {
+            intervalSlider.value = 1;
+            intervalCustom.value = 1;
+            intervalLabel.textContent = '1 min';
+        }
+
+        // Initialize visibility
+        updateUartFields();
+
+        // Toggle change
+        if (enableUart) {
+            enableUart.addEventListener('change', updateUartFields);
+        }
+
+        // Slider <-> custom input sync
+        if (intervalSlider && intervalCustom && intervalLabel) {
+            intervalSlider.addEventListener('input', (e) => {
+                const min = parseInt(e.target.value);
+                intervalCustom.value = min;
+                intervalLabel.textContent = min + ' min';
+                if (enableUart.checked) {
+                    hiddenInterval.value = min;
+                }
+            });
+
+            intervalCustom.addEventListener('input', (e) => {
+                const min = parseInt(e.target.value) || 1;
+                intervalSlider.value = Math.min(Math.max(min, 1), 300);
+                intervalLabel.textContent = min + ' min';
+                if (enableUart.checked) {
+                    hiddenInterval.value = min;
+                }
+            });
+        }
+
+        // Form submit validation
+        if (uartForm) {
+            uartForm.addEventListener('submit', (e) => {
+                if (enableUart.checked) {
+                    const name = document.getElementById('uartName').value.trim();
+                    const script = document.getElementById('uartScript').value.trim();
+                    const interval = parseInt(intervalCustom.value) || 0;
+                    
+                    if (!name) {
+                        e.preventDefault();
+                        alert(t.uart.required);
+                        return false;
+                    }
+                    if (interval <= 0) {
+                        e.preventDefault();
+                        alert(t.uart.intervalRequired);
+                        return false;
+                    }
+                    if (!script) {
+                        e.preventDefault();
+                        alert(t.uart.scriptRequired);
+                        return false;
+                    }
+                    hiddenInterval.value = interval;
+                } else {
+                    hiddenInterval.value = '0';
+                }
+            });
+        }
+    });
+</script>

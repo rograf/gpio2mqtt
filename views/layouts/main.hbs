@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="{{currentLanguage}}" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gpio2Mqtt</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="stylesheet" href="/assets/bootstrap.min.css">
+    <script src="/assets/bootstrap.min.js"></script>
+    <style>
+        .navbar-brand, .nav-link {
+            color: #fff !important;
+        }
+        .nav-link:hover {
+            color: rgba(255,255,255,0.8) !important;
+        }
+        .nav-link.active {
+            font-weight: 600;
+            text-decoration: underline;
+        }
+        .navbar-action {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.5);
+            color: #fff;
+            border-radius: 4px;
+            padding: 4px 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            height: 32px;
+            cursor: pointer;
+        }
+        .navbar-action:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: #fff;
+            color: #fff;
+        }
+        select.navbar-action option {
+            background: #0d6efd;
+            color: #fff;
+        }
+        @media (min-width: 992px) {
+            .navbar-action { width: auto !important; }
+        }
+        #mqttStatus {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        #mqttStatus.collapsed {
+            bottom: 2px;
+            right: 2px;
+            width: 60px;
+            height: 8px;
+            border-radius: 4px 4px 0 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            border: none;
+        }
+        #mqttStatus.collapsed #mqttContent {
+            display: none;
+        }
+        #mqttContent {
+            padding: 14px 20px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 500;
+        }
+        #mqttStatus:hover {
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    {{#if loggedIn}}
+    <nav class="navbar navbar-expand-lg bg-primary">
+        <div class="container px-3">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
+                <span class="fw-semibold">GPIO2MQTT</span>
+            </a>
+            <button class="navbar-toggler border-white" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarColor01">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard" data-route="/dashboard">{{t.nav.dashboard}}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/config" data-route="/config">{{t.nav.config}}</a>
+                    </li>
+                </ul>
+                <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center gap-2 mt-2 mt-lg-0">
+                    <select id="languageSelect" class="navbar-action w-100 w-lg-auto">
+                        <option value="en" {{#if (eq currentLanguage "en")}}selected{{/if}}>EN</option>
+                        <option value="pl" {{#if (eq currentLanguage "pl")}}selected{{/if}}>PL</option>
+                    </select>
+                    <form id="logoutForm" method="POST" action="/logout" class="m-0">
+                        <button type="submit" class="navbar-action w-100">{{t.app.logout}}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <aside id="mqttStatus" class="{{#if mqttConnected}}mqtt-connected bg-success{{else}}mqtt-disconnected bg-danger{{/if}}">
+        <div id="mqttContent">
+            <div class="d-flex align-items-center gap-2">
+                <span class="rounded-circle d-inline-block bg-white" style="width:10px;height:10px;"></span>
+                <span>{{t.mqtt.status}}: {{#if mqttConnected}}{{t.mqtt.connected}}{{else}}{{t.mqtt.disconnected}}{{/if}}</span>
+            </div>
+        </div>
+    </aside>
+
+    <script>
+        (function () {
+            // --- Cross-tab logout via BroadcastChannel ---
+            let authChannel;
+            try {
+                authChannel = new BroadcastChannel('gpio2mqtt_auth');
+                authChannel.onmessage = (e) => {
+                    if (e.data === 'logout') {
+                        window.location.href = '/login';
+                    }
+                };
+            } catch (err) {
+                // BroadcastChannel not supported - fallback to storage event
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'gpio2mqtt_logout') {
+                        window.location.href = '/login';
+                    }
+                });
+            }
+
+            // --- Language select ---
+            const languageSelect = document.getElementById('languageSelect');
+            const currentLanguage = '{{currentLanguage}}';
+
+            if (languageSelect) {
+                fetch('/api/languages')
+                    .then(res => res.json())
+                    .then(languages => {
+                        languageSelect.innerHTML = languages.map(lang =>
+                            `<option value="${lang}" ${lang === currentLanguage ? 'selected' : ''}>${lang.toUpperCase()}</option>`
+                        ).join('');
+                    })
+                    .catch(() => {});
+
+                languageSelect.addEventListener('change', async (e) => {
+                    try {
+                        const response = await fetch('/api/language', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ language: e.target.value })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            window.location.reload();
+                        }
+                    } catch (err) {
+                        console.error('Error changing language:', err);
+                    }
+                });
+            }
+
+            // --- Highlight active route ---
+            const currentPath = window.location.pathname;
+            document.querySelectorAll('.nav-link[data-route]').forEach(link => {
+                if (link.getAttribute('data-route') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+
+            // --- MQTT Status toggle ---
+            const mqttStatus = document.getElementById('mqttStatus');
+
+            const isCollapsed = localStorage.getItem('mqttStatusCollapsed') === 'true';
+            if (isCollapsed) {
+                mqttStatus.classList.add('collapsed');
+            }
+
+            mqttStatus.addEventListener('click', () => {
+                mqttStatus.classList.toggle('collapsed');
+                localStorage.setItem('mqttStatusCollapsed', mqttStatus.classList.contains('collapsed'));
+            });
+
+            // --- Logout ---
+            const form = document.getElementById('logoutForm');
+            if (form) {
+                form.addEventListener('submit', () => {
+                    // Notify other tabs
+                    try {
+                        if (authChannel) {
+                            authChannel.postMessage('logout');
+                        } else {
+                            localStorage.setItem('gpio2mqtt_logout', Date.now().toString());
+                        }
+                    } catch (e) {}
+                });
+            }
+        })();
+    </script>
+    {{/if}}
+    {{{body}}}
+</body>
+</html>

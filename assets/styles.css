@@ -81,6 +81,10 @@ body {
     text-decoration: none;
 }
 
+.app-navbar-actions {
+    margin-left: auto;
+}
+
 .navbar-toggler {
     border-color: var(--g2m-gray-200) !important;
 }
@@ -105,6 +109,24 @@ body {
     border-color: var(--g2m-black);
     color: var(--g2m-black);
     outline: none;
+}
+
+@media (min-width: 992px) {
+    .navbar-collapse {
+        position: relative;
+    }
+
+    .app-main-nav {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+
+@media (max-width: 991.98px) {
+    .app-navbar-actions {
+        margin-left: 0;
+    }
 }
 
 .card,

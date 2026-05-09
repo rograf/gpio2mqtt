@@ -6,74 +6,8 @@
     <title>Gpio2Mqtt</title>
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/styles.css">
     <script src="/assets/bootstrap.min.js"></script>
-    <style>
-        .navbar-brand, .nav-link {
-            color: #fff !important;
-        }
-        .nav-link:hover {
-            color: rgba(255,255,255,0.8) !important;
-        }
-        .nav-link.active {
-            font-weight: 600;
-            text-decoration: underline;
-        }
-        .navbar-action {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.5);
-            color: #fff;
-            border-radius: 4px;
-            padding: 4px 12px;
-            font-size: 14px;
-            line-height: 1.5;
-            height: 32px;
-            cursor: pointer;
-        }
-        .navbar-action:hover {
-            background: rgba(255,255,255,0.15);
-            border-color: #fff;
-            color: #fff;
-        }
-        select.navbar-action option {
-            background: #0d6efd;
-            color: #fff;
-        }
-        @media (min-width: 992px) {
-            .navbar-action { width: auto !important; }
-        }
-        #mqttStatus {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 1000;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        #mqttStatus.collapsed {
-            bottom: 2px;
-            right: 2px;
-            width: 60px;
-            height: 8px;
-            border-radius: 4px 4px 0 0;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-            border: none;
-        }
-        #mqttStatus.collapsed #mqttContent {
-            display: none;
-        }
-        #mqttContent {
-            padding: 14px 20px;
-            color: #fff;
-            font-size: 15px;
-            font-weight: 500;
-        }
-        #mqttStatus:hover {
-            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-        }
-    </style>
 </head>
 <body>
     {{#if loggedIn}}
@@ -82,11 +16,11 @@
             <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
                 <span class="fw-semibold">GPIO2MQTT</span>
             </a>
-            <button class="navbar-toggler border-white" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarColor01">
-                <ul class="navbar-nav me-auto">
+                <ul class="navbar-nav app-main-nav">
                     <li class="nav-item">
                         <a class="nav-link" href="/dashboard" data-route="/dashboard">{{t.nav.dashboard}}</a>
                     </li>
@@ -94,7 +28,7 @@
                         <a class="nav-link" href="/config" data-route="/config">{{t.nav.config}}</a>
                     </li>
                 </ul>
-                <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center gap-2 mt-2 mt-lg-0">
+                <div class="app-navbar-actions d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center gap-2 mt-2 mt-lg-0">
                     <select id="languageSelect" class="navbar-action w-100 w-lg-auto">
                         <option value="en" {{#if (eq currentLanguage "en")}}selected{{/if}}>EN</option>
                         <option value="pl" {{#if (eq currentLanguage "pl")}}selected{{/if}}>PL</option>
@@ -110,7 +44,7 @@
     <aside id="mqttStatus" class="{{#if mqttConnected}}mqtt-connected bg-success{{else}}mqtt-disconnected bg-danger{{/if}}">
         <div id="mqttContent">
             <div class="d-flex align-items-center gap-2">
-                <span class="rounded-circle d-inline-block bg-white" style="width:10px;height:10px;"></span>
+                <span class="mqtt-dot"></span>
                 <span>{{t.mqtt.status}}: {{#if mqttConnected}}{{t.mqtt.connected}}{{else}}{{t.mqtt.disconnected}}{{/if}}</span>
             </div>
         </div>

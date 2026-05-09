@@ -1,4 +1,4 @@
-<div class="container p-3">
+<div class="container dashboard-shell p-3">
     <div class="row">
         <!-- Left: GPIO Grid -->
         <div class="col-lg-8">
@@ -7,10 +7,10 @@
             <div class="d-flex justify-content-center mt-4">
                 <div class="card mb-3 margin-0" style="width: fit-content;">
                     <div class="card-body py-2 d-flex flex-wrap gap-3">
-                        <span class="d-flex align-items-center gap-2"><span class="rounded" style="width:20px;height:20px;display:inline-block;background:#fff;border:2px solid #ccc;"></span><small>{{t.dashboard.legend.unused}}</small></span>
-                        <span class="d-flex align-items-center gap-2"><span class="rounded" style="width:20px;height:20px;display:inline-block;background:#1976d2;"></span><small>{{t.dashboard.legend.monitor}}</small></span>
-                        <span class="d-flex align-items-center gap-2"><span class="rounded" style="width:20px;height:20px;display:inline-block;background:#f57c00;"></span><small>{{t.dashboard.legend.control}}</small></span>
-                        <span class="d-flex align-items-center gap-2"><span class="rounded" style="width:20px;height:20px;display:inline-block;background:#ffc107;"></span><small>{{t.dashboard.legend.uart}}</small></span>
+                        <span class="d-flex align-items-center gap-2"><span class="legend-swatch"></span><small>{{t.dashboard.legend.unused}}</small></span>
+                        <span class="d-flex align-items-center gap-2"><span class="legend-swatch monitor"></span><small>{{t.dashboard.legend.monitor}}</small></span>
+                        <span class="d-flex align-items-center gap-2"><span class="legend-swatch control"></span><small>{{t.dashboard.legend.control}}</small></span>
+                        <span class="d-flex align-items-center gap-2"><span class="legend-swatch uart"></span><small>{{t.dashboard.legend.uart}}</small></span>
                     </div>
                 </div>
             </div>
@@ -91,7 +91,7 @@
                 <div class="card mb-2">
                     <div class="card-body py-2">
                         <h6 class="mb-2">{{t.dashboard.history.title}}</h6>
-                        <div id="historyList" style="max-height:400px;overflow-y:auto;">
+                        <div id="historyList">
                             <small class="text-muted">{{t.dashboard.history.loading}}</small>
                         </div>
                     </div>
@@ -105,116 +105,6 @@
         </div>
     </div>
 </div>
-
-<style>
-    .pin-row {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        margin-bottom: 4px;
-    }
-    .pin-desc {
-        width: 200px;
-        font-size: 12px;
-        color: #555;
-        flex-shrink: 0;
-        border-bottom: 1px solid rgb(224, 224, 224);
-        min-height: 1rem;
-    }
-    .pin-desc.left { text-align: right; padding-right: 0.5rem; }
-    .pin-desc.right { text-align: left; padding-left: 0.5rem; }
-    .gpio-pin {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        border: 2px solid #ccc;
-        border-radius: 8px;
-        padding: 6px 10px;
-        cursor: pointer;
-        transition: all 0.2s;
-        background: #fff;
-        color: #212529;
-        flex: 0 0 200px;
-    }
-    .gpio-pin:hover { border-color: #888; }
-    .gpio-pin.no-click { cursor: not-allowed; opacity: 0.7; }
-    .gpio-pin.selected { box-shadow: 0 0 0 3px rgba(13,110,253,0.5); }
-    .gpio-pin .pin-num {
-        background: rgba(0,0,0,0.1);
-        border-radius: 4px;
-        padding: 2px 6px;
-        font-size: 11px;
-        font-weight: bold;
-        flex-shrink: 0;
-        width: 15%;
-        text-align: center;
-    }
-    .gpio-pin .pin-name {
-        font-size: 13px;
-        font-weight: 500;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        flex: 1;
-        text-align: center;
-    }
-    .gpio-pin .pin-alt {
-        background: rgba(0,0,0,0.08);
-        border-radius: 4px;
-        padding: 2px 5px;
-        font-size: 10px;
-        flex-shrink: 0;
-        white-space: nowrap;
-        width: 30%;
-        text-align: center;
-    }
-
-    /* Mobile: stack name below pin */
-    @media (max-width: 576px) {
-        .pin-desc {
-            display: none;
-        }
-        .pin-row {
-            gap: 6px;
-        }
-        .pin-col {
-            flex: 1 1 0;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-        }
-        .pin-col .gpio-pin {
-            flex: 1 1 auto;
-            min-width: 0;
-            padding: 6px 8px;
-        }
-        .pin-col .pin-label {
-            display: block;
-            font-size: 11px;
-            text-align: center;
-            color: #555;
-            min-height: 1.2em;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .gpio-pin .pin-name {
-            font-size: 12px;
-        }
-        .gpio-pin .pin-alt {
-            font-size: 9px;
-        }
-    }
-    @media (min-width: 577px) {
-        .pin-label {
-            display: none;
-        }
-        .pin-col {
-            display: contents;
-        }
-    }
-</style>
 
 <script>
     let currentGpio = null;
@@ -331,23 +221,26 @@
 
     function getPinStyle(pinInfo) {
         if (pinInfo.uart) {
-            return { bg: '#ffc107', border: '#ffc107', color: '#000' };
+            return { bg: '#d1d5db', border: '#d1d5db', color: '#111827' };
         }
         if (pinInfo.gpio !== undefined) {
             const gc = gpioData.find(g => g.gpio === pinInfo.gpio);
             if (gc && gc.type === 'monitor') {
                 return gc.state === true
-                    ? { bg: '#1976d2', border: '#1976d2', color: '#fff' }
-                    : { bg: '#fff', border: '#1976d2', color: '#1976d2' };
+                    ? { bg: '#111827', border: '#111827', color: '#fff' }
+                    : { bg: '#fff', border: '#111827', color: '#111827' };
             }
             if (gc && gc.type === 'control') {
                 return gc.state === 'on'
-                    ? { bg: '#f57c00', border: '#f57c00', color: '#fff' }
-                    : { bg: '#fff', border: '#f57c00', color: '#f57c00' };
+                    ? { bg: '#4f7df3', border: '#4f7df3', color: '#fff' }
+                    : { bg: '#fff', border: '#4f7df3', color: '#111827' };
             }
         }
-        if (pinInfo.color) return { bg: pinInfo.color, border: pinInfo.color, color: '#fff' };
-        return { bg: '#fff', border: '#ccc', color: '#212529' };
+        if (pinInfo.type === 'power' || pinInfo.type === 'ground') {
+            return { bg: '#111827', border: '#111827', color: '#fff' };
+        }
+        if (pinInfo.color) return { bg: '#111827', border: '#111827', color: '#fff' };
+        return { bg: '#fff', border: '#d1d5db', color: '#111827' };
     }
 
     function getConfigName(pinInfo, pinNum) {

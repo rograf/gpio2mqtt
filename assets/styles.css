@@ -25,6 +25,9 @@
     --g2m-gray-100: #f3f4f6;
     --g2m-accent-monitor: #ff6b11;
     --g2m-accent-control: #4f7df3;
+    --g2m-accent-power: #fee2e2;
+    --g2m-accent-power-border: #fca5a5;
+    --g2m-accent-power-text: #991b1b;
 }
 
 *,

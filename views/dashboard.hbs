@@ -236,7 +236,10 @@
                     : { bg: '#fff', border: '#4f7df3', color: '#111827' };
             }
         }
-        if (pinInfo.type === 'power' || pinInfo.type === 'ground') {
+        if (pinInfo.type === 'power') {
+            return { bg: '#fee2e2', border: '#fca5a5', color: '#991b1b' };
+        }
+        if (pinInfo.type === 'ground') {
             return { bg: '#111827', border: '#111827', color: '#fff' };
         }
         if (pinInfo.color) return { bg: '#111827', border: '#111827', color: '#fff' };

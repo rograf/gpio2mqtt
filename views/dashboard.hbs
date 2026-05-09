@@ -227,8 +227,8 @@
             const gc = gpioData.find(g => g.gpio === pinInfo.gpio);
             if (gc && gc.type === 'monitor') {
                 return gc.state === true
-                    ? { bg: '#111827', border: '#111827', color: '#fff' }
-                    : { bg: '#fff', border: '#111827', color: '#111827' };
+                    ? { bg: '#ff6b11', border: '#ff6b11', color: '#fff' }
+                    : { bg: '#fff', border: '#ff6b11', color: '#111827' };
             }
             if (gc && gc.type === 'control') {
                 return gc.state === 'on'

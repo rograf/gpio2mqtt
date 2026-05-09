@@ -23,7 +23,8 @@
     --g2m-gray-300: #d1d5db;
     --g2m-gray-200: #e5e7eb;
     --g2m-gray-100: #f3f4f6;
-    --g2m-accent: #4f7df3;
+    --g2m-accent-monitor: #ff6b11;
+    --g2m-accent-control: #4f7df3;
 }
 
 *,
@@ -43,10 +44,6 @@ body {
     min-height: 64px;
     background: #fff !important;
     border-bottom: 1px solid var(--g2m-gray-200);
-}
-
-.navbar .container {
-    max-width: none;
 }
 
 .navbar-brand,
@@ -265,10 +262,6 @@ h6 {
     height: 9px;
 }
 
-.dashboard-shell {
-    max-width: none;
-}
-
 .legend-swatch {
     display: inline-block;
     width: 20px;
@@ -277,13 +270,13 @@ h6 {
 }
 
 .legend-swatch.monitor {
-    background: var(--g2m-black);
-    border-color: var(--g2m-black);
+    background: var(--g2m-accent-monitor);
+    border-color: var(--g2m-accent-monitor);
 }
 
 .legend-swatch.control {
-    background: var(--g2m-accent);
-    border-color: var(--g2m-accent);
+    background: var(--g2m-accent-control);
+    border-color: var(--g2m-accent-control);
 }
 
 .legend-swatch.uart {

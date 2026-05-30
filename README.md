@@ -156,6 +156,24 @@ Published automatically when a monitored pin changes state (with 500ms debounce)
 
 Initial states are also published when the MQTT broker connection is established.
 
+### State snapshot request (subscribe)
+
+**Topic:** `gpio2mqtt/get`
+
+Publish any payload to this topic to request the current state snapshot. GPIO2MQTT responds by publishing the latest state of every configured monitor pin, control pin, and UART result:
+
+- `gpio2mqtt/GPIO{n}` with `{ "connected": true }` for monitor pins,
+- `gpio2mqtt/GPIO{n}` with `{ "power": true }` for control pins.
+- `gpio2mqtt/uart` with the latest UART payload, if a UART result has already been collected.
+
+For monitor pins, GPIO2MQTT reads the pin during the snapshot request if the startup state has not been read yet, so both `connected: true` and `connected: false` are published.
+
+Example:
+
+```json
+{}
+```
+
 ### Control pins (publish)
 
 **Topic:** `gpio2mqtt/GPIO{n}`

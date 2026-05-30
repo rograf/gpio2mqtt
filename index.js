@@ -37,17 +37,24 @@ setOnConnect(() => {
   gpio.publishInitialStates();
 });
 setOnMessage((topic, message) => {
+  if (topic === `${config.mqtt.topic}/get`) {
+    console.log(`Received state snapshot request on ${topic}`);
+    gpio.publishInitialStates();
+    uart.publishLatestUartState();
+    return;
+  }
+
   gpio.handleMqttMessage(topic, message);
 });
-
-// Connect MQTT
-connectMqtt();
 
 // Start GPIO monitoring
 gpio.initMonitoring();
 
 // Start UART scheduler
 uart.restartUartScheduler();
+
+// Connect MQTT
+connectMqtt();
 
 // Setup routes
 setupRoutes(app);
